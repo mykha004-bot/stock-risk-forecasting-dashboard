@@ -18,8 +18,9 @@ magnitude) evaluated honestly against naive and ARIMA baselines.
 - [x] **Step 2 — Correlation & risk analysis** (this commit): rolling
       correlation (30/60/90d), hierarchical cluster ordering, per-stock
       annualized vol, historical/parametric VaR + CVaR, drawdown, risk summary.
-- [ ] Step 3 — Forecasting (XGBoost direction + magnitude vs. baselines,
-      walk-forward backtest)
+- [x] **Step 3 — Forecasting** (this commit): leak-proof features, XGBoost
+      direction + magnitude, naive & ARIMA baselines, expanding-window
+      walk-forward backtest with embargo, honest metrics net of costs.
 - [ ] Step 4 — Streamlit app (3 tabs)
 - [ ] Step 5 — Full methodology & limitations write-up
 
@@ -47,6 +48,8 @@ live pull. Edit the basket in `config.py` (`TICKERS`).
 | `db.py` | SQLite schema, idempotent upsert, incremental helpers, reads |
 | `data_pipeline.py` | `seed()` (batched full pull) + `refresh()` (incremental) |
 | `analysis.py` | Returns, rolling correlation, clustering, vol, VaR/CVaR, risk summary |
+| `features.py` | Leak-proof next-day feature/target engineering |
+| `forecasting.py` | XGBoost + baselines, walk-forward backtest, honest metrics |
 | `seed_db.py` / `refresh.py` | CLI entry points |
 | `tests/` | Storage, resilience, and analysis tests (no network needed) |
 
