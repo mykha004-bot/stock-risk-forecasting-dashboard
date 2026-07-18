@@ -13,9 +13,11 @@ magnitude) evaluated honestly against naive and ARIMA baselines.
 
 ## Status
 
-- [x] **Step 1 — Data pipeline** (this commit): SQLite storage, batched full
-      seed, incremental refresh, retry/backoff, graceful failure, tests.
-- [ ] Step 2 — Correlation & risk analysis
+- [x] **Step 1 — Data pipeline**: SQLite storage, batched full seed,
+      incremental refresh, retry/backoff, graceful failure, tests.
+- [x] **Step 2 — Correlation & risk analysis** (this commit): rolling
+      correlation (30/60/90d), hierarchical cluster ordering, per-stock
+      annualized vol, historical/parametric VaR + CVaR, drawdown, risk summary.
 - [ ] Step 3 — Forecasting (XGBoost direction + magnitude vs. baselines,
       walk-forward backtest)
 - [ ] Step 4 — Streamlit app (3 tabs)
@@ -44,8 +46,9 @@ live pull. Edit the basket in `config.py` (`TICKERS`).
 | `config.py` | Basket, sector map, windows, fetch-resilience knobs |
 | `db.py` | SQLite schema, idempotent upsert, incremental helpers, reads |
 | `data_pipeline.py` | `seed()` (batched full pull) + `refresh()` (incremental) |
+| `analysis.py` | Returns, rolling correlation, clustering, vol, VaR/CVaR, risk summary |
 | `seed_db.py` / `refresh.py` | CLI entry points |
-| `tests/test_db.py` | Storage + resilience tests (no network needed) |
+| `tests/` | Storage, resilience, and analysis tests (no network needed) |
 
 ## Design notes
 
