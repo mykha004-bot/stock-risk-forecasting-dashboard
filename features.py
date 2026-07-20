@@ -1,16 +1,3 @@
-"""Feature engineering for the next-day forecast.
-
-The ONE rule that matters here: every feature at row t is computable from data
-available at the close of day t, and the target is day t+1's return. All rolling
-/ lag operations are trailing (right-aligned), so no feature can see the future.
-The no-lookahead property is enforced by a test (test_forecasting.py) that checks
-features for a given date are identical whether computed on the full series or a
-series truncated at that date.
-
-Returns are SIMPLE returns throughout the modeling stack, because the strategy
-P&L in the backtest trades on simple returns — keeping one definition end to end
-avoids a subtle train/test unit mismatch.
-"""
 import numpy as np
 import pandas as pd
 

@@ -11,6 +11,8 @@ magnitude) evaluated honestly against naive and ARIMA baselines.
 > **on demand**, falling back to cached data when a live pull fails. This is
 > not a real-time trading tool.
 
+**→ Full methodology, honest results, and limitations: [METHODOLOGY.md](METHODOLOGY.md).**
+
 ## Status
 
 - [x] **Step 1 — Data pipeline**: SQLite storage, batched full seed,
@@ -24,7 +26,8 @@ magnitude) evaluated honestly against naive and ARIMA baselines.
 - [x] **Step 4 — Streamlit app** (this commit): 3-tab dashboard (correlation &
       risk, single-stock forecast, cross-section backtest), cached, on-demand
       refresh, data-freshness panel, precomputed backtest artifact.
-- [ ] Step 5 — Full methodology & limitations write-up
+- [x] **Step 5 — Methodology & limitations write-up** (this commit): see
+      [METHODOLOGY.md](METHODOLOGY.md).
 
 ## Quickstart
 
