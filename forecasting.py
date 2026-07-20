@@ -1,4 +1,3 @@
-
 import warnings
 
 import numpy as np
@@ -9,7 +8,7 @@ import features as F
 TRADING_DAYS = 252
 
 # Shallow, regularized trees: financial signal is faint and noisy, so we bias
-
+# hard toward underfitting rather than memorizing noise.
 XGB_PARAMS = dict(
     n_estimators=200, max_depth=3, learning_rate=0.05,
     subsample=0.8, colsample_bytree=0.8, reg_lambda=1.0,
@@ -17,7 +16,7 @@ XGB_PARAMS = dict(
 )
 
 
-# models --------------------------------------------------------------
+#models --------------------------------------------------------------
 
 def _xgb_classifier():
     from xgboost import XGBClassifier
@@ -139,7 +138,33 @@ def _pos(dir_series):
     return dir_series.replace({0: -1, 1: 1}).astype(float)
 
 
-# --- metrics -------------------------------------------------------------
+def latest_signal(prices, ticker):
+    """Train on all labeled history, predict the single unknown next day.
+
+    This is the 'what does the model say about tomorrow' number for the app.
+    Returned confidence is the classifier probability, which we show honestly:
+    near 0.5 means the model has essentially no conviction.
+    """
+    data = F.make_features(prices, ticker)
+    live = F.latest_feature_row(prices, ticker)
+    if live is None or len(data) < 100:
+        return None
+    live_date, live_x = live
+    X, y_dir, y_ret = data[F.feature_columns()], data[F.TARGET_DIR], data[F.TARGET_RET]
+    clf = _xgb_classifier().fit(X, y_dir)
+    reg = _xgb_regressor().fit(X, y_ret)
+    xrow = live_x.to_frame().T
+    proba_up = float(clf.predict_proba(xrow)[0, 1])
+    return {
+        "as_of": str(live_date.date()),
+        "proba_up": proba_up,
+        "direction": "up" if proba_up > 0.5 else "down",
+        "pred_ret": float(reg.predict(xrow)[0]),
+        "conviction": abs(proba_up - 0.5) * 2,  # 0 = coin flip, 1 = certain
+    }
+
+
+# metrics -------------------------------------------------------------
 
 def direction_metrics(y_dir, pred_dir, proba=None):
     y_dir = np.asarray(y_dir); pred_dir = np.asarray(pred_dir)

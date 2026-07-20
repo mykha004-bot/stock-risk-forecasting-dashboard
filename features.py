@@ -1,3 +1,16 @@
+"""Feature engineering for the next-day forecast.
+
+The ONE rule that matters here: every feature at row t is computable from data
+available at the close of day t, and the target is day t+1's return. All rolling
+/ lag operations are trailing (right-aligned), so no feature can see the future.
+The no-lookahead property is enforced by a test (test_forecasting.py) that checks
+features for a given date are identical whether computed on the full series or a
+series truncated at that date.
+
+Returns are SIMPLE returns throughout the modeling stack, because the strategy
+P&L in the backtest trades on simple returns — keeping one definition end to end
+avoids a subtle train/test unit mismatch.
+"""
 import numpy as np
 import pandas as pd
 
@@ -19,12 +32,13 @@ def feature_columns():
     return cols
 
 
-def make_features(prices, ticker):
-    """Build (features + targets) for one ticker from a wide price frame.
+def build_matrix(prices, ticker):
+    """Full feature+target frame for one ticker.
 
-    Returns a DataFrame indexed by date with feature_columns() plus
-    target_ret (next-day simple return) and target_dir (1 if up else 0).
-    Rows with any NaN (warm-up period, final row with unknown future) dropped.
+    Feature columns are trailing-only (no lookahead). target_ret is next-day
+    return; it is NaN on the final row because tomorrow isn't known yet. Warm-up
+    rows (insufficient history for a rolling window) have NaN features. Nothing
+    is dropped here — callers decide.
     """
     px = prices[ticker].dropna().sort_index()
     ret = px.pct_change()
@@ -39,9 +53,33 @@ def make_features(prices, ticker):
     sd = px.rolling(Z_WINDOW).std()
     df[f"z_{Z_WINDOW}"] = (px - ma) / sd                   # mean-reversion z-score
 
-    # Targets: NEXT day's return. shift(-1) is the only forward-looking op, and
-    # it's the label — never a feature.
-    df[TARGET_RET] = ret.shift(-1)
-    df[TARGET_DIR] = (df[TARGET_RET] > 0).astype(int)
+    df[TARGET_RET] = ret.shift(-1)                         # NEXT day's return
+    df[TARGET_DIR] = (df[TARGET_RET] > 0).astype("float")  # NaN-safe; cast later
+    return df
 
-    return df.dropna()
+
+def make_features(prices, ticker):
+    """Model-ready frame: features + targets, fully labeled rows only."""
+    df = build_matrix(prices, ticker)
+    labeled = df.dropna().copy()
+    labeled[TARGET_DIR] = labeled[TARGET_DIR].astype(int)
+    return labeled
+
+
+def latest_feature_row(prices, ticker):
+    """Most recent row with complete features but an UNKNOWN target.
+
+    This is the row you'd actually act on: all features available at today's
+    close, predicting tomorrow. Returns (date, Series of features) or None.
+    """
+    df = build_matrix(prices, ticker)
+    feats = df[feature_columns()]
+    complete = feats.dropna()
+    if complete.empty:
+        return None
+    last_date = complete.index[-1]
+    # Only "actionable" if its target is unknown (i.e. it's the final bar).
+    if not np.isnan(df.loc[last_date, TARGET_RET]):
+        # All rows are labeled (shouldn't happen with shift(-1)); no live row.
+        return last_date, complete.iloc[-1]
+    return last_date, complete.loc[last_date]

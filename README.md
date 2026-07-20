@@ -21,7 +21,9 @@ magnitude) evaluated honestly against naive and ARIMA baselines.
 - [x] **Step 3 — Forecasting** (this commit): leak-proof features, XGBoost
       direction + magnitude, naive & ARIMA baselines, expanding-window
       walk-forward backtest with embargo, honest metrics net of costs.
-- [ ] Step 4 — Streamlit app (3 tabs)
+- [x] **Step 4 — Streamlit app** (this commit): 3-tab dashboard (correlation &
+      risk, single-stock forecast, cross-section backtest), cached, on-demand
+      refresh, data-freshness panel, precomputed backtest artifact.
 - [ ] Step 5 — Full methodology & limitations write-up
 
 ## Quickstart
@@ -31,14 +33,26 @@ python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\act
 pip install -r requirements.txt
 
 python seed_db.py        # full-history pull -> data/prices.db  (run locally)
-python refresh.py        # later: incremental update (only new dates)
-python refresh.py --full # force a full re-pull
+python precompute.py     # run all backtests -> data/backtests.pkl (minutes)
+streamlit run app.py     # launch the dashboard locally
 
-pytest -q                # run the pipeline tests
+python refresh.py        # later: incremental price update (only new dates)
+pytest -q                # run the test suite (28 tests)
 ```
 
-Then **commit `data/prices.db`** so the deployed app has data without needing a
-live pull. Edit the basket in `config.py` (`TICKERS`).
+Then **commit both `data/prices.db` and `data/backtests.pkl`** so the deployed
+app renders instantly without a live pull or a cold-start backtest. Re-run
+`precompute.py` after a data refresh. Edit the basket in `config.py` (`TICKERS`).
+
+## Deploy (Streamlit Community Cloud)
+
+1. Push the repo to GitHub with `data/prices.db` and `data/backtests.pkl`
+   committed (the `.gitignore` keeps them; it only excludes SQLite temp files).
+2. On [share.streamlit.io](https://share.streamlit.io), point a new app at the
+   repo, main file `app.py`. `requirements.txt` is picked up automatically.
+3. The app boots off the committed artifacts. The **Refresh prices** button
+   attempts a live pull; on shared cloud IPs Yahoo often rate-limits, so it
+   falls back to cached data — which is the honest, documented behavior.
 
 ## Layout
 
@@ -50,8 +64,12 @@ live pull. Edit the basket in `config.py` (`TICKERS`).
 | `analysis.py` | Returns, rolling correlation, clustering, vol, VaR/CVaR, risk summary |
 | `features.py` | Leak-proof next-day feature/target engineering |
 | `forecasting.py` | XGBoost + baselines, walk-forward backtest, honest metrics |
-| `seed_db.py` / `refresh.py` | CLI entry points |
-| `tests/` | Storage, resilience, and analysis tests (no network needed) |
+| `charts.py` | Plotly figure builders (styled, pure functions) |
+| `app.py` | Streamlit dashboard (thin wiring layer over the modules above) |
+| `precompute.py` | Offline backtest runner -> `data/backtests.pkl` |
+| `seed_db.py` / `refresh.py` | CLI entry points for the data pipeline |
+| `.streamlit/config.toml` | Dashboard theme |
+| `tests/` | Storage, resilience, analysis, and forecasting tests |
 
 ## Design notes
 
